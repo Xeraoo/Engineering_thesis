@@ -1,0 +1,46 @@
+//Tymoteusz Maj
+//Informatyka Geoprzestrzenna (Geoinformacja)
+//Praca inżynierska
+
+//Setting up the work area
+
+Map.setCenter(18.8, 50.3, 10); // Center the map on the work area
+
+var GZMRectangle= ee.Geometry.Rectangle([18.25, 49.95, 19.65, 50.55]); // Set work area as krakow using a rectangle
+
+
+
+//The square showing the krakow area, is used to properly narrow down the work area so that it 
+//is in the area where LANDSAT images are downloaded, making the work faster.
+
+
+//Adding the Boundaries_GZM asset extracted with QGIS from the counties of Poland to the work.
+var GZMBoundaries = ee.FeatureCollection("users/tymoteuszmaj/GZM");
+
+
+//Determining the year for which we perform the analysis
+
+var analysisYear = 2002;
+var startDate = ee.Date.fromYMD(analysisYear, 5, 1);
+var endDate = ee.Date.fromYMD(analysisYear, 10, 31);
+
+// Download LANDSAT/LT05/C01/T1_TOA data
+var landsatCollection = ee.ImageCollection("LANDSAT/LT05/C01/T1_TOA")
+    .filterBounds(GZMRectangle)
+    .filterDate(startDate, endDate) //Analysis in terms of narrowing the period to one year
+    .sort("CLOUD_COVER", true) //Analysis in terms of least cloud cover
+    .limit(20); //limit set at 20 photos that have the least cloud cover
+    
+var medianImage = landsatCollection.median(); // Select the median image from the collection
+
+
+//Trim LANDSAT images to the area of the city of Krakow, using an asset
+var landsatImage = medianImage.clip(GZMBoundaries);
+
+
+// RGB image
+var rgbImage = landsatImage.select(['B3', 'B2', 'B1']); // Create RGB image using red, green, and blue bands
+Map.addLayer(rgbImage, {min: 0, max: 0.3}, 'RGB Image'); // Display the RGB image on the map
+
+var fccImage = landsatImage.select(['B4', 'B3', 'B2']); 
+Map.addLayer(fccImage, {min: 0, max: 0.3}, 'FCC Image'); 
